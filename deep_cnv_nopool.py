@@ -75,26 +75,19 @@ model = Sequential()
 model.add(ZeroPadding1D(12,input_shape=(200,4)))
 model.add(Dropout(0.1))
 
-model.add(Convolution1D(64, 3,
+model.add(Convolution1D(64, 8,
                         border_mode="same",
                         W_constraint = maxnorm(2),
                         input_shape=(224,4),
+                        subsample_length=4,
                         activation="relu"))
-model.add(MaxPooling1D(pool_length=2, stride=2, border_mode="same"))
-model.add(Dropout(0.5))
+model.add(Dropout(0.25))
 
-model.add(Convolution1D(128, 3,
+model.add(Convolution1D(128, 4,
                         border_mode="same",
                         W_constraint = maxnorm(2),
-                        activation="relu"))
-model.add(MaxPooling1D(pool_length=2, stride=2, border_mode="same"))
-'''
-model.add(Dropout(0.5))
-model.add(Convolution1D(64, 3,
-                        border_mode="same",
                         subsample_length=2,
                         activation="relu"))
-'''
 model.add(Flatten())
 model.add(Dropout(0.5))
 
@@ -128,7 +121,7 @@ for i in range(100):
             Y_train,
             shuffle=True,
             nb_epoch=1,
-            batch_size=200,
+            batch_size=100,
             verbose=1,
             validation_split=0.1)
   
@@ -140,7 +133,9 @@ for i in range(100):
     train_auc.append(roc_auc_score(Y_train[:,j], Y_train_pred[:,j]))
     test_auc.append(roc_auc_score(Y_test[:,j], Y_test_pred[:,j]))
   print "train_auc", " ".join(map(lambda f: "%0.03f"%(f,), train_auc))
+  print "mean_train_auc", sum(train_auc)/float(len(train_auc))
   print "test_auc", " ".join(map(lambda f: "%0.03f"%(f,), test_auc))
+  print "mean_test_auc",  sum(test_auc)/float(len(test_auc))
 
 model.save("model.hdf")
 
