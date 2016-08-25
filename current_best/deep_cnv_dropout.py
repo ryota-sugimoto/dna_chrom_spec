@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python 
 
 import os
 import struct
@@ -9,7 +9,7 @@ from keras.utils import np_utils
 data = scipy.io.loadmat("data.mat")
 
 all_size = data["seq_tr"].shape[0]
-train_size = 50000
+train_size = 54000
 
 comp_mat = np.matrix([[0,0,0,1],
                       [0,0,1,0],
@@ -45,8 +45,8 @@ Y_train = data["out_tr"][:train_size]
 X_train_rc = reverse_complement(X_train)
 X_train_r = reverse(X_train)
 X_train_c = complement(X_train)
-X_train = np.concatenate([X_train,X_train_rc,X_train_r,X_train_c])
-Y_train = np.concatenate([Y_train]*4)
+X_train = np.concatenate([X_train,X_train_rc])
+Y_train = np.concatenate([Y_train]*2)
 #Y_train = Y_train[:,out_n]
 
 
@@ -65,9 +65,10 @@ Y_test = Y_test.astype(theano.config.floatX)
 
 from keras.models import Sequential
 from keras.layers.core import Dense,Flatten,Dropout
-from keras.layers.convolutional import Convolution1D,ZeroPadding1D,MaxPooling1D
+from keras.layers.convolutional import Convolution1D,ZeroPadding1D
 from keras.constraints import maxnorm
 from keras.optimizers import SGD
+from keras.layers.normalization import BatchNormalization as BN
 
 np.random.seed(1)
 
@@ -75,35 +76,82 @@ model = Sequential()
 model.add(ZeroPadding1D(12,input_shape=(200,4)))
 model.add(Dropout(0.1))
 
-model.add(Convolution1D(64, 8,
+#conv_1
+model.add(Convolution1D(64, 7,
                         border_mode="same",
-                        W_constraint = maxnorm(2),
-                        input_shape=(224,4),
-                        subsample_length=4,
-                        activation="relu"))
-model.add(Dropout(0.25))
-
-model.add(Convolution1D(128, 4,
-                        border_mode="same",
-                        W_constraint = maxnorm(2),
+                        W_constraint=maxnorm(2),
                         subsample_length=2,
                         activation="relu"))
+model.add(BN())
+model.add(Dropout(0.5))
+
+model.add(Convolution1D(64, 3,
+                        border_mode="same",
+                        W_constraint=maxnorm(2),
+                        subsample_length=2,
+                        activation="relu"))
+model.add(BN())
+model.add(Dropout(0.5))
+model.add(Convolution1D(64, 3,
+                        border_mode="same",
+                        W_constraint=maxnorm(2),
+                        activation="relu"))
+model.add(BN())
+model.add(Dropout(0.5))
+
+#conv_2
+model.add(Convolution1D(128, 3,
+                        border_mode="same",
+                        W_constraint=maxnorm(2),
+                        subsample_length=2,
+                        activation="relu"))
+model.add(BN())
+model.add(Dropout(0.5))
+model.add(Convolution1D(128, 3,
+                        border_mode="same",
+                        W_constraint=maxnorm(2),
+                        activation="relu"))
+model.add(BN())
+model.add(Dropout(0.5))
+
+#conv_3
+model.add(Convolution1D(256, 3,
+                        border_mode="same",
+                        W_constraint=maxnorm(2),
+                        subsample_length=2,
+                        activation="relu"))
+model.add(BN())
+model.add(Dropout(0.5))
+model.add(Convolution1D(256, 3,
+                        border_mode="same",
+                        W_constraint=maxnorm(2),
+                        activation="relu"))
+model.add(BN())
+model.add(Dropout(0.5))
 model.add(Flatten())
+
+
+#fc
+model.add(Dense(1024,
+                W_constraint=maxnorm(2),
+                activation="relu"))
+model.add(BN())
+model.add(Dropout(0.5))
+model.add(Dense(1024,
+                W_constraint=maxnorm(2),
+                activation="relu"))
+model.add(BN())
 model.add(Dropout(0.5))
 
-model.add(Dense(224,
-                activation="relu",
-                W_constraint=maxnorm(2)))
-model.add(Dropout(0.5))
 
+#out
 model.add(Dense(8,  
-                activation="sigmoid",
-                W_constraint=maxnorm(2)))
+                W_constraint=maxnorm(2),
+                activation="sigmoid"))
 
 
-from keras.optimizers import sgd
 model.compile(loss="binary_crossentropy",
-              optimizer="adadelta",
+              optimizer="adam",
               metrics=["accuracy"])
 '''
 for i,layer in enumerate(model.layers):
@@ -117,9 +165,9 @@ from numpy import vstack
 from sklearn.metrics import roc_auc_score
 import sys
 
-per_epoch = 1
+per_epoch = 100
 
-for i in range(3):
+for i in range(10):
   model.fit(X_train,
             Y_train,
             shuffle=True,
@@ -141,9 +189,9 @@ for i in range(3):
   print "mean_test_auc",  sum(test_auc)/float(len(test_auc))
   sys.stdout.flush()
 
-  model.save(str(i*per_epoch)+"_epoch_"+"model.hdf")
+  model.save(str((i+1)*per_epoch)+"_epoch_"+"model.hdf")
 
-Y_practice = model.predict_proba(X_practice, verbose=0)
-res_f = open("result.txt","w")
-for v in Y_practice:
-  print >> res_f, " ".join(map(str,list(v)))
+  Y_practice = model.predict_proba(X_practice, verbose=0)
+  res_f = open(str((i+1)*per_epoch)+"_epoch_"+"result.txt","w")
+  for v in Y_practice:
+    print >> res_f, " ".join(map(str,list(v)))

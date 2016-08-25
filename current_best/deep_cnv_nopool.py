@@ -91,7 +91,12 @@ model.add(Convolution1D(128, 4,
 model.add(Flatten())
 model.add(Dropout(0.5))
 
-model.add(Dense(224,
+model.add(Dense(1024,
+                activation="relu",
+                W_constraint=maxnorm(2)))
+model.add(Dropout(0.5))
+
+model.add(Dense(512,
                 activation="relu",
                 W_constraint=maxnorm(2)))
 model.add(Dropout(0.5))
@@ -117,7 +122,7 @@ from numpy import vstack
 from sklearn.metrics import roc_auc_score
 import sys
 
-per_epoch = 1
+per_epoch = 1000
 
 for i in range(3):
   model.fit(X_train,
@@ -141,7 +146,7 @@ for i in range(3):
   print "mean_test_auc",  sum(test_auc)/float(len(test_auc))
   sys.stdout.flush()
 
-  model.save(str(i*per_epoch)+"_epoch_"+"model.hdf")
+  model.save(str((i+1)*per_epoch)+"_epoch_"+"model.hdf")
 
 Y_practice = model.predict_proba(X_practice, verbose=0)
 res_f = open("result.txt","w")

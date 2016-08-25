@@ -65,45 +65,69 @@ Y_test = Y_test.astype(theano.config.floatX)
 
 from keras.models import Sequential
 from keras.layers.core import Dense,Flatten,Dropout
-from keras.layers.convolutional import Convolution1D,ZeroPadding1D,MaxPooling1D
+from keras.layers.convolutional import Convolution1D,ZeroPadding1D,MaxPooling1D,AveragePooling1D
 from keras.constraints import maxnorm
 from keras.optimizers import SGD
+from keras.layers.normalization import BatchNormalization as BN
 
 np.random.seed(1)
 
 model = Sequential()
 model.add(ZeroPadding1D(12,input_shape=(200,4)))
-model.add(Dropout(0.1))
 
-model.add(Convolution1D(64, 8,
+model.add(Convolution1D(64, 7,
                         border_mode="same",
-                        W_constraint = maxnorm(2),
-                        input_shape=(224,4),
-                        subsample_length=4,
-                        activation="relu"))
-model.add(Dropout(0.25))
-
-model.add(Convolution1D(128, 4,
-                        border_mode="same",
-                        W_constraint = maxnorm(2),
                         subsample_length=2,
                         activation="relu"))
-model.add(Flatten())
-model.add(Dropout(0.5))
+model.add(BN())
+model.add(MaxPooling1D(pool_length=3,stride=2,border_mode="same"))
 
-model.add(Dense(224,
-                activation="relu",
-                W_constraint=maxnorm(2)))
-model.add(Dropout(0.5))
+model.add(Convolution1D(64, 3,
+                        border_mode="same",
+                        activation="relu"))
+model.add(BN())
+model.add(Convolution1D(64, 3,
+                        border_mode="same",
+                        activation="relu"))
+model.add(BN())
+
+model.add(Convolution1D(128, 3,
+                        border_mode="same",
+                        subsample_length=2,
+                        activation="relu"))
+model.add(BN())
+model.add(Convolution1D(128, 3,
+                        border_mode="same",
+                        activation="relu"))
+model.add(BN())
+
+model.add(Convolution1D(256, 3,
+                        border_mode="same",
+                        subsample_length=2,
+                        activation="relu"))
+model.add(BN())
+model.add(Convolution1D(256, 3,
+                        border_mode="same",
+                        subsample_length=2,
+                        activation="relu"))
+model.add(BN())
+
+model.add(AveragePooling1D())
+
+model.add(Flatten())
+
+model.add(Dense(1024,
+                activation="relu"))
+model.add(BN())
 
 model.add(Dense(8,  
-                activation="sigmoid",
-                W_constraint=maxnorm(2)))
+                activation="sigmoid"))
 
 
-from keras.optimizers import sgd
+from keras.optimizers import SGD
+sgd = SGD(lr=0.1, momentum=0.9, decay=0.0001, nesterov=True)
 model.compile(loss="binary_crossentropy",
-              optimizer="adadelta",
+              optimizer=sgd,
               metrics=["accuracy"])
 '''
 for i,layer in enumerate(model.layers):
@@ -124,8 +148,8 @@ for i in range(3):
             Y_train,
             shuffle=True,
             nb_epoch=per_epoch,
-            batch_size=500,
-            verbose=2,
+            batch_size=200,
+            verbose=1,
             validation_split=0.1)
   
 
