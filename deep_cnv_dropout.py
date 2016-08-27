@@ -132,12 +132,12 @@ model.add(Flatten())
 
 
 #fc
-model.add(Dense(1024,
+model.add(Dense(2048,
                 W_constraint=maxnorm(2),
                 activation="relu"))
 model.add(BN())
 model.add(Dropout(0.5))
-model.add(Dense(1024,
+model.add(Dense(2048,
                 W_constraint=maxnorm(2),
                 activation="relu"))
 model.add(BN())
@@ -152,7 +152,7 @@ model.add(Dense(8,
 
 model.compile(loss="binary_crossentropy",
               optimizer="adam",
-              metrics=["accuracy"])
+              metrics=["accuracy","mae"])
 '''
 for i,layer in enumerate(model.layers):
   print i,"input",layer.input
@@ -187,7 +187,6 @@ for i in range(10):
   print "mean_train_auc", sum(train_auc)/float(len(train_auc))
   print "test_auc", " ".join(map(lambda f: "%0.03f"%(f,), test_auc))
   print "mean_test_auc",  sum(test_auc)/float(len(test_auc))
-  sys.stdout.flush()
 
   model.save(str((i+1)*per_epoch)+"_epoch_"+"model.hdf")
 
@@ -195,3 +194,4 @@ for i in range(10):
   res_f = open(str((i+1)*per_epoch)+"_epoch_"+"result.txt","w")
   for v in Y_practice:
     print >> res_f, " ".join(map(str,list(v)))
+  sys.stdout.flush()
